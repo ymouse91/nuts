@@ -1,0 +1,16 @@
+{
+  "name": "Pähkinä purtavaksi",
+  "short_name": "Pähkinät",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2f2f2",
+  "theme_color": "#2a2a2a",
+  "icons": [
+      {
+      "src": "./icon182.png",
+      "sizes": "182x182",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+	]
+}

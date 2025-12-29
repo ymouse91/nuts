@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Squirrels Go Nuts! – Puzzle Builder</title>
+
+  <style>
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:#f2f2f2;
+      padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 16px);
+      -webkit-user-select:none; user-select:none;
+    }
+
+    .wrap{
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    h1{ font-size: 18px; font-weight: 900; margin-bottom: 10px; }
+
+    .card{
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row.tight{ gap:8px; }
+    label{ font-weight:800; font-size: 13px; opacity:.9; }
+    input[type="text"], input[type="number"], textarea, select{
+      border:2px solid #ddd;
+      border-radius:12px;
+      padding:9px 10px;
+      font-weight:800;
+      background:#fff;
+      outline: none;
+      width: 100%;
+    }
+    textarea{
+      font-weight:700;
+      min-height: 240px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .btn{
+      border:0;
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:900;
+      cursor:pointer;
+      background:#2a2a2a;
+      color:#fff;
+      white-space:nowrap;
+    }
+    .btn.secondary{ background:#e9e9e9; color:#111; }
+    .btn.danger{ background:#c62828; }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .hint{ font-size: 13px; line-height: 1.25; opacity: .85; }
+    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    /* Board */
+    .boardWrap{ display:flex; justify-content:center; align-items:center; padding: 8px 0; }
+
+    .board{
+      width:min(560px, 92vw);
+      aspect-ratio: 1 / 1;
+      background:#5b3c1d;
+      border-radius:16px;
+      padding:12px;
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,.12);
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      grid-template-rows:repeat(4, 1fr);
+      gap:8px;
+      position:relative;
+      touch-action: manipulation;
+    }
+
+    .cell{
+      background:#3a2816;
+      border-radius:14px;
+      position:relative;
+      overflow:hidden;
+      cursor:pointer;
+    }
+    .cell:hover{ outline: 3px solid rgba(255,255,255,.12); outline-offset: -3px; }
+
+    .hole{
+      position:absolute;
+      inset:22%;
+      border-radius:999px;
+      z-index: 1;
+      background: radial-gradient(circle at 35% 35%, #fff 0%, #e8e8e8 55%, #d8d8d8 100%);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.18);
+      opacity: .98;
+      pointer-events:none;
+    }
+
+    .pieceFill{
+      position:absolute;
+      inset:7%;
+      border-radius:12px;
+      z-index: 3;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.28);
+      pointer-events:none;
+    }
+
+    .pGreyA{ background:#c9ced6; }
+    .pGreyB{ background:#9fa6b2; }
+    .pOrange{ background:#f2a14b; }
+    .pYellow{ background:#cfe58a; }
+
+    .flower{
+      position:absolute;
+      inset:6%;
+      border-radius:12px;
+      z-index: 4;
+      background:#a7f0a7;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+      border: 3px solid rgba(0,0,0,.62);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      pointer-events:none;
+    }
+
+    .nut{
+      position:absolute;
+      inset:18%;
+      z-index: 6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      pointer-events:none;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,.35));
+    }
+
+    .sel{
+      position:absolute;
+      inset:2%;
+      border-radius:14px;
+      outline: 6px solid rgba(255,215,0,.95);
+      outline-offset:-2px;
+      z-index: 2;
+      pointer-events:none;
+    }
+
+    .small{ font-size: 12px; opacity: .8; font-weight: 700; }
+
+    .palette{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .tile{
+      border:2px solid #e6e6e6;
+      border-radius:14px;
+      padding:10px;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      background:#fff;
+    }
+    .tile.active{ border-color: rgba(255,215,0,.95); box-shadow: 0 0 0 3px rgba(255,215,0,.20) inset; }
+    .tileTitle{ font-weight:900; display:flex; justify-content:space-between; gap:8px; }
+    .pill{
+      font-size:11px;
+      font-weight:900;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#f1f1f1;
+      opacity:.9;
+    }
+    .tileMini{
+      width: 100%;
+      height: 94px;
+      border-radius:12px;
+      background:#f7f7f7;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .miniCell{
+      width: 22px;
+      height: 22px;
+      border-radius:6px;
+      background:#ddd;
+      position:relative;
+    }
+    .miniNut{
+      position:absolute;
+      inset: 2px;
+      border-radius:6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+
+    @media (max-width: 1020px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <!-- LEFT -->
+    <div class="card">
+      <h1>Pulmakirjasto + editori</h1>
+
+      <div class="card" style="padding:10px; box-shadow:none; border:2px solid #eee;">
+        <div class="row tight" style="justify-content:space-between;">
+          <div style="font-weight:900;">Pulmat</div>
+          <div class="row tight">
+            <button id="newPuzzleBtn" class="btn">➕ Uusi pulma</button>
+            <button id="savePuzzleBtn" class="btn secondary">💾 Tallenna</button>
+            <button id="deletePuzzleBtn" class="btn danger">🗑 Poista</button>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>Valitse pulma</label>
+            <select id="puzzleSelect"></select>
+          </div>
+          <div>
+            <label>Nimi</label>
+            <input id="puzzleName" type="text" value="Uusi pulma" />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>ID</label>
+            <input id="puzzleId" type="number" value="100" />
+          </div>
+          <div class="hint">
+            Reiät vakiopaikoissa: <code>[2,4,9,15]</code><br>
+            Kukka on 1×1 asetettava pala (ei pähkinää).
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        <b>Työtapa:</b> Valitse pala → kierrä → klikkaa laudalta ruutua (ankkuri siihen).<br>
+        Pähkinät ovat kiinteitä L-paloissa: harmaa L = <code>P/xx</code>, keltainen L = <code>x/px</code>.
+      </div>
+
+      <div class="card" style="padding:10px; box-shadow:none; border:2px solid #eee;">
+        <div class="row" style="justify-content:space-between;">
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <div style="font-weight:900;">Palat (5 kpl)</div>
+            <div id="selInfo" class="small">–</div>
+          </div>
+          <div class="row tight">
+            <button id="rotBtn" class="btn secondary">⤾ Kierrä</button>
+            <button id="removeBtn" class="btn danger">Poista</button>
+          </div>
+        </div>
+
+        <div class="palette" id="palette"></div>
+      </div>
+
+
+
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Pelilauta (4×4)</div>
+        <div class="small">Klikkaa ruutua asettaaksesi valitun palan.</div>
+      </div>
+      <div class="boardWrap">
+        <div id="board" class="board" aria-label="4x4 board"></div>
+      </div>
+	        <label>JSON (kirjasto)</label>
+      <textarea id="jsonOut" spellcheck="false"></textarea>
+
+      <div class="hint">
+        Kirjastoformaatti: <code>{version, holes_fixed, puzzles:[...]}</code><br>
+        Pulmassa: <code>pieces[].cells</code> ja <code>nut_cell</code> ovat absoluuttisia (r,c).
+      </div>
+	        <div class="row">
+        <button id="exportBtn" class="btn">💾 Vie KAIKKI JSON</button>
+        <button id="importBtn" class="btn secondary">📥 Tuo KAIKKI JSON</button>
+        <button id="clearLibBtn" class="btn danger">Tyhjennä kirjasto</button>
+        <input id="fileInput" type="file" accept=".json,application/json" style="display:none">
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const W=4, H=4;
+  const HOLES_FIXED = [2,4,9,15];
+  const HOLES = new Set(HOLES_FIXED);
+
+  const boardEl = document.getElementById("board");
+  const paletteEl = document.getElementById("palette");
+  const jsonOut = document.getElementById("jsonOut");
+
+  const puzzleSelectEl = document.getElementById("puzzleSelect");
+  const puzzleNameEl = document.getElementById("puzzleName");
+  const puzzleIdEl = document.getElementById("puzzleId");
+
+  const newPuzzleBtn = document.getElementById("newPuzzleBtn");
+  const savePuzzleBtn = document.getElementById("savePuzzleBtn");
+  const deletePuzzleBtn = document.getElementById("deletePuzzleBtn");
+
+  const selInfo = document.getElementById("selInfo");
+  const rotBtn = document.getElementById("rotBtn");
+  const removeBtn = document.getElementById("removeBtn");
+
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const clearLibBtn = document.getElementById("clearLibBtn");
+  const fileInput = document.getElementById("fileInput");
+
+  function idx(r,c){ return r*W+c; }
+  function inBounds(r,c){ return r>=0 && r<H && c>=0 && c<W; }
+  function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  // Shapes: offsets from anchor (0,0)
+  const BASE = {
+    I2: [{dr:0,dc:0},{dr:1,dc:0}],
+    L3: [{dr:0,dc:0},{dr:1,dc:0},{dr:1,dc:1}],
+    X1: [{dr:0,dc:0}]
+  };
+
+  function rotOffset(o, rot){
+    const {dr, dc} = o;
+    if(rot===0) return {dr,dc};
+    if(rot===1) return {dr: dc, dc: -dr};
+    if(rot===2) return {dr: -dr, dc: -dc};
+    return {dr: -dc, dc: dr};
+  }
+
+  function offsets(type, rot){
+    return BASE[type].map(o => rotOffset(o, rot));
+  }
+
+  function absCells(piece){
+    return offsets(piece.type, piece.rot).map(o => ({ r: piece.anchor.r + o.dr, c: piece.anchor.c + o.dc }));
+  }
+
+  function nutAbs(piece){
+    if(!piece.hasNut) return null;
+    const n = rotOffset(piece.nutLocal, piece.rot);
+    return { r: piece.anchor.r + n.dr, c: piece.anchor.c + n.dc };
+  }
+
+  // 5 fixed pieces (always exist in editor)
+  const FIXED_PIECE_DEFS = [
+    { id:"Grey_I",   title:"Harmaa I2",     type:"I2", color:"pGreyA", hasNut:true,  nutLocal:{dr:0,dc:0} },
+    { id:"Orange_I", title:"Oranssi I2",    type:"I2", color:"pOrange",hasNut:true,  nutLocal:{dr:1,dc:0} },
+    { id:"Grey_L",   title:"Harmaa L3",     type:"L3", color:"pGreyB", hasNut:true,  nutLocal:{dr:0,dc:0} }, // P/xx
+    { id:"Yellow_L", title:"Keltainen L3",  type:"L3", color:"pYellow",hasNut:true,  nutLocal:{dr:1,dc:0} }, // x/px
+    { id:"Flower",   title:"Kukka (X1)",    type:"X1", color:null,     hasNut:false, nutLocal:null }
+  ];
+
+  function createFreshPuzzle(id, name){
+    return {
+      id,
+      name,
+      // store placements: for each of 5 pieces: placed + anchor + rot
+      placements: FIXED_PIECE_DEFS.map(def => ({
+        id: def.id,
+        placed: false,
+        anchor: {r:0,c:0},
+        rot: 0
+      }))
+    };
+  }
+
+  // Library
+  let library = {
+    version: 1,
+    holes_fixed: HOLES_FIXED,
+    puzzles: [ createFreshPuzzle(100, "Uusi pulma") ]
+  };
+
+  let currentPuzzleIndex = 0;
+
+  // Editor session state = fixed defs + current placements merged
+  let sessionPieces = []; // full objects with def + placement
+  let selectedId = "Grey_I";
+
+  function currentPuzzle(){
+    return library.puzzles[currentPuzzleIndex] || null;
+  }
+
+  function rebuildSessionFromCurrentPuzzle(){
+    const pz = currentPuzzle();
+    if(!pz) return;
+
+    // map placements
+    const map = new Map((pz.placements||[]).map(pl => [pl.id, pl]));
+    sessionPieces = FIXED_PIECE_DEFS.map(def => {
+      const pl = map.get(def.id) || {placed:false, anchor:{r:0,c:0}, rot:0};
+      return {
+        ...deepClone(def),
+        placed: !!pl.placed,
+        anchor: deepClone(pl.anchor || {r:0,c:0}),
+        rot: Number.isInteger(pl.rot) ? ((pl.rot%4)+4)%4 : 0
+      };
+    });
+
+    // ensure selection exists
+    if(!sessionPieces.find(x=>x.id===selectedId)) selectedId = sessionPieces[0].id;
+
+    // fill top fields
+    puzzleIdEl.value = pz.id;
+    puzzleNameEl.value = pz.name;
+
+    renderPalette();
+    updateSelInfo();
+    renderBoard();
+    refreshPuzzleSelect();
+  }
+
+  function writeSessionBackToCurrentPuzzle(){
+    const pz = currentPuzzle();
+    if(!pz) return;
+
+    pz.id = Number(puzzleIdEl.value) || pz.id;
+    pz.name = puzzleNameEl.value || pz.name;
+
+    pz.placements = sessionPieces.map(sp => ({
+      id: sp.id,
+      placed: !!sp.placed,
+      anchor: { r: sp.anchor.r, c: sp.anchor.c },
+      rot: sp.rot
+    }));
+  }
+
+  function refreshPuzzleSelect(){
+    const pz = currentPuzzle();
+    puzzleSelectEl.innerHTML = "";
+    for(let i=0;i<library.puzzles.length;i++){
+      const x = library.puzzles[i];
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${x.id} – ${x.name}`;
+      puzzleSelectEl.appendChild(opt);
+    }
+    puzzleSelectEl.value = String(currentPuzzleIndex);
+    deletePuzzleBtn.disabled = (library.puzzles.length <= 1);
+    savePuzzleBtn.disabled = !pz;
+  }
+
+  function pieceById(id){ return sessionPieces.find(p => p.id===id) || null; }
+
+  function occupiedMap(excludeId=null){
+    const occ = new Map();
+    for(const p of sessionPieces){
+      if(!p.placed) continue;
+      if(p.id===excludeId) continue;
+      for(const cc of absCells(p)){
+        occ.set(`${cc.r},${cc.c}`, {t:"piece", id:p.id});
+      }
+    }
+    return occ;
+  }
+
+  function canPlaceAt(piece, anchorR, anchorC, rotVal){
+    const trial = { ...piece, placed:true, anchor:{r:anchorR,c:anchorC}, rot:rotVal };
+    const occ = occupiedMap(piece.id);
+
+    for(const cc of absCells(trial)){
+      if(!inBounds(cc.r,cc.c)) return false;
+      if(occ.has(`${cc.r},${cc.c}`)) return false;
+    }
+    return true;
+  }
+
+
+  // Älykäs ankkurin valinta: kun käyttäjä klikkaa ruutua, yritetään asettaa pala niin,
+  // että *jokin* palan soluista osuu klikattuun ruutuun (ei vain ankkuri).
+  function findSmartAnchorForClick(piece, clickR, clickC){
+    const offs = offsets(piece.type, piece.rot);
+    let best = null;
+
+    const baseR = piece.placed ? piece.anchor.r : clickR;
+    const baseC = piece.placed ? piece.anchor.c : clickC;
+
+    for(const o of offs){
+      const ar = clickR - o.dr;
+      const ac = clickC - o.dc;
+      if(!canPlaceAt(piece, ar, ac, piece.rot)) continue;
+
+      const score = Math.abs(ar - baseR) + Math.abs(ac - baseC);
+      if(!best || score < best.score){
+        best = { r: ar, c: ac, score };
+      }
+    }
+    return best ? { r: best.r, c: best.c } : null;
+  }
+
+  function selectPiece(id){
+    selectedId = id;
+    renderPalette();
+    updateSelInfo();
+    renderBoard();
+  }
+
+  function updateSelInfo(){
+    const p = pieceById(selectedId);
+    if(!p){ selInfo.textContent="–"; return; }
+    const placed = p.placed ? `laudalla @(${p.anchor.r},${p.anchor.c})` : "ei laudalla";
+    selInfo.textContent = `${p.title} | rot=${p.rot} | ${placed}`;
+    rotBtn.disabled = (p.type==="X1");
+  }
+
+  function rotateSelected(){
+    const p = pieceById(selectedId);
+    if(!p || p.type==="X1") return;
+
+    const nextRot = (p.rot + 1) % 4;
+
+    if(!p.placed){
+      p.rot = nextRot;
+      updateSelInfo();
+      renderPalette();
+      renderBoard();
+      return;
+    }
+
+    if(canPlaceAt(p, p.anchor.r, p.anchor.c, nextRot)){
+      p.rot = nextRot;
+      updateSelInfo();
+      renderPalette();
+      renderBoard();
+    }
+  }
+
+  function removeSelected(){
+    const p = pieceById(selectedId);
+    if(!p) return;
+    p.placed = false;
+    updateSelInfo();
+    renderBoard();
+    renderPalette();
+  }
+
+  // Palette preview (rotation-aware)
+  function renderPalette(){
+    paletteEl.innerHTML = "";
+
+    const GRID = 3;
+    const ORIGIN = { r:1, c:1 };
+    const key = (r,c)=>`${r},${c}`;
+
+    for(const fp of sessionPieces){
+      const tile = document.createElement("div");
+      tile.className = "tile" + (fp.id===selectedId ? " active" : "");
+      tile.addEventListener("click", ()=> selectPiece(fp.id));
+
+      const title = document.createElement("div");
+      title.className = "tileTitle";
+      title.innerHTML = `<span>${fp.title}</span><span class="pill">rot ${fp.rot}</span>`;
+
+      const mini = document.createElement("div");
+      mini.className = "tileMini";
+
+      // Miniatyyri: klikkaus kiertää 90° (ja valitsee palan jos se ei ollut valittuna)
+mini.addEventListener("click", (e)=>{
+  e.stopPropagation();
+  // Ensimmäinen klikkaus vain valitsee palan – ei kierrä.
+  const wasSelected = (fp.id === selectedId);
+  if(!wasSelected){
+    selectPiece(fp.id);
+    return;
+  }
+  rotateSelected();
+});
+
+
+      const wrap = document.createElement("div");
+      wrap.style.display = "grid";
+      wrap.style.gridTemplateColumns = `repeat(${GRID}, 22px)`;
+      wrap.style.gridAutoRows = "22px";
+      wrap.style.gap = "6px";
+
+      const filled = new Set();
+      for(const o of offsets(fp.type, fp.rot)){
+        const rr = ORIGIN.r + o.dr;
+        const cc = ORIGIN.c + o.dc;
+        if(rr>=0 && rr<GRID && cc>=0 && cc<GRID) filled.add(key(rr,cc));
+      }
+
+      let nutPos = null;
+      if(fp.hasNut && fp.nutLocal){
+        const n = rotOffset(fp.nutLocal, fp.rot);
+        const rr = ORIGIN.r + n.dr;
+        const cc = ORIGIN.c + n.dc;
+        if(rr>=0 && rr<GRID && cc>=0 && cc<GRID) nutPos = key(rr,cc);
+      }
+
+      for(let r=0;r<GRID;r++){
+        for(let c=0;c<GRID;c++){
+          const k = key(r,c);
+          const cell = document.createElement("div");
+          cell.className = "miniCell";
+
+          if(filled.has(k)){
+            if(fp.type==="X1"){
+              cell.style.background = "#bfeabf";
+            } else {
+              if(fp.color==="pGreyA") cell.style.background = "#c9ced6";
+              if(fp.color==="pGreyB") cell.style.background = "#9fa6b2";
+              if(fp.color==="pOrange") cell.style.background = "#f2a14b";
+              if(fp.color==="pYellow") cell.style.background = "#cfe58a";
+            }
+          } else {
+            cell.style.background = "#efefef";
+          }
+
+          if(nutPos===k){
+            const n = document.createElement("div");
+            n.className = "miniNut";
+            n.textContent = "🌰";
+            cell.appendChild(n);
+          }
+
+          wrap.appendChild(cell);
+        }
+      }
+
+      mini.appendChild(wrap);
+
+      const s = document.createElement("div");
+      s.className = "small";
+      s.textContent = fp.placed ? "✓ asetettu laudalle" : "ei laudalla";
+
+      tile.appendChild(title);
+      tile.appendChild(mini);
+      tile.appendChild(s);
+      paletteEl.appendChild(tile);
+    }
+  }
+
+  function renderBoard(){
+    boardEl.innerHTML = "";
+
+    for(let r=0;r<H;r++){
+      for(let c=0;c<W;c++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+
+        if(HOLES.has(idx(r,c))){
+          const h = document.createElement("div");
+          h.className = "hole";
+          cell.appendChild(h);
+        }
+
+        cell.addEventListener("pointerdown", (e)=>{
+          e.preventDefault();
+          const rr = Number(cell.dataset.r);
+          const cc = Number(cell.dataset.c);
+
+          const p = pieceById(selectedId);
+          if(!p) return;
+
+          const smart = findSmartAnchorForClick(p, rr, cc);
+          if(smart){
+            p.anchor = {r: smart.r, c: smart.c};
+            p.placed = true;
+            updateSelInfo();
+            renderBoard();
+            renderPalette();
+          }
+        });
+
+        boardEl.appendChild(cell);
+      }
+    }
+
+    // selected highlight if placed
+    {
+      const p = pieceById(selectedId);
+      if(p && p.placed){
+        for(const cc of absCells(p)){
+          const el = boardEl.children[idx(cc.r,cc.c)];
+          const s = document.createElement("div");
+          s.className = "sel";
+          el.appendChild(s);
+        }
+      }
+    }
+
+    // pieces
+    for(const p of sessionPieces){
+      if(!p.placed) continue;
+      for(const cc of absCells(p)){
+        const el = boardEl.children[idx(cc.r,cc.c)];
+        if(p.type==="X1"){
+          const f = document.createElement("div");
+          f.className = "flower";
+          f.textContent = "🌸";
+          el.appendChild(f);
+        } else {
+          const fill = document.createElement("div");
+          fill.className = `pieceFill ${p.color}`;
+          el.appendChild(fill);
+        }
+      }
+    }
+
+    // nuts
+    for(const p of sessionPieces){
+      if(!p.placed) continue;
+      const n = nutAbs(p);
+      if(!n) continue;
+      const el = boardEl.children[idx(n.r,n.c)];
+      const nt = document.createElement("div");
+      nt.className = "nut";
+      nt.textContent = "🌰";
+      el.appendChild(nt);
+    }
+  }
+
+  // --- Library ops ---
+  function newPuzzle(){
+    // write current edits first? (we do it silently)
+    writeSessionBackToCurrentPuzzle();
+    exportLibraryToTextarea(); // autosave näkyviin ennen uuden luontia
+
+    // pick next id
+    const maxId = Math.max(...library.puzzles.map(p=>Number(p.id)||0), 0);
+    const nextId = maxId + 1;
+
+    library.puzzles.push(createFreshPuzzle(nextId, `Pulma ${nextId}`));
+    currentPuzzleIndex = library.puzzles.length - 1;
+    selectedId = "Grey_I";
+    rebuildSessionFromCurrentPuzzle();
+  }
+
+  function savePuzzle(){
+    writeSessionBackToCurrentPuzzle();
+    refreshPuzzleSelect();
+    exportLibraryToTextarea(); // keep textarea in sync
+  }
+
+  function deletePuzzle(){
+    if(library.puzzles.length <= 1) return;
+    library.puzzles.splice(currentPuzzleIndex, 1);
+    currentPuzzleIndex = Math.max(0, currentPuzzleIndex - 1);
+    rebuildSessionFromCurrentPuzzle();
+    exportLibraryToTextarea();
+  }
+
+  function exportLibraryToTextarea(){
+    // convert placements to "pieces with cells" for portability
+    const puzzlesOut = library.puzzles.map(pz => {
+      // build a temp session to compute cells/nut
+      const map = new Map((pz.placements||[]).map(pl => [pl.id, pl]));
+      const pieces = FIXED_PIECE_DEFS.map(def => {
+        const pl = map.get(def.id) || {placed:false, anchor:{r:0,c:0}, rot:0};
+        const sp = {
+          ...deepClone(def),
+          placed: !!pl.placed,
+          anchor: deepClone(pl.anchor || {r:0,c:0}),
+          rot: Number.isInteger(pl.rot) ? ((pl.rot%4)+4)%4 : 0
+        };
+        if(!sp.placed) return null;
+
+        const cells = absCells(sp).map(cc => [cc.r, cc.c]);
+        const n = nutAbs(sp);
+        return {
+          id: sp.id,
+          color: sp.color,
+          shape: sp.type,
+          rot: sp.rot,
+          cells,
+          nut_cell: n ? [n.r, n.c] : null
+        };
+      }).filter(Boolean);
+
+      return { id: pz.id, name: pz.name, pieces };
+    });
+
+    const out = {
+      version: 1,
+      board: { w:4, h:4 },
+      holes_fixed: HOLES_FIXED,
+      puzzles: puzzlesOut
+    };
+
+    jsonOut.value = JSON.stringify(out, null, 2);
+  }
+
+function importLibraryFromTextarea(){
+  let obj;
+  try{ obj = JSON.parse(jsonOut.value); }
+  catch(e){ alert("JSON ei ole kelvollinen."); return; }
+
+  if(!obj || !Array.isArray(obj.puzzles)){
+    alert("Kirjasto-JSON: puuttuu puzzles[].");
+    return;
+  }
+
+  const newLib = {
+    version: 1,
+    holes_fixed: HOLES_FIXED,
+    puzzles: []
+  };
+
+  for(const pz of obj.puzzles){
+    const fresh = createFreshPuzzle(Number(pz.id)||0, pz.name || "Pulma");
+    const plMap = new Map(fresh.placements.map(pl => [pl.id, pl]));
+
+    if(Array.isArray(pz.pieces)){
+      for(const rp of pz.pieces){
+        const pl = plMap.get(rp.id);
+        if(!pl) continue;
+
+        if(!Array.isArray(rp.cells) || rp.cells.length < 1) continue;
+
+        // rotaatio (normalisoitu 0..3)
+        const rot = Number.isInteger(rp.rot) ? ((rp.rot % 4) + 4) % 4 : 0;
+        pl.rot = rot;
+
+        // muoto: käytä JSON:ista jos löytyy, muuten def:stä
+        const def = FIXED_PIECE_DEFS.find(d => d.id === rp.id);
+        const shape = (rp.shape || (def ? def.type : null));
+        if(!shape) continue;
+
+        const offs = offsets(shape, rot);
+        if(rp.cells.length !== offs.length){
+          // jos JSONissa on väärä solumäärä, ei voida asettaa
+          continue;
+        }
+
+        // tee setti soluista
+        const set = new Set(rp.cells.map(([r,c]) => `${r},${c}`));
+
+        // Koska BASE-muodoissa on aina (0,0), ankkuri on aina jokin rp.cells:n solu.
+        let anchorFound = null;
+
+        for(const [ar, ac] of rp.cells){
+          let ok = true;
+          for(const o of offs){
+            const rr = ar + o.dr;
+            const cc = ac + o.dc;
+            if(!set.has(`${rr},${cc}`)){
+              ok = false;
+              break;
+            }
+          }
+          if(ok){
+            anchorFound = { r: ar, c: ac };
+            break;
+          }
+        }
+
+        if(anchorFound){
+          pl.anchor = anchorFound;
+          pl.placed = true;
+        }else{
+          // ei löytynyt sopivaa ankkuria → jätetään asettamatta
+          pl.placed = false;
+        }
+      }
+    }
+
+    newLib.puzzles.push(fresh);
+  }
+
+  if(newLib.puzzles.length===0){
+    newLib.puzzles.push(createFreshPuzzle(100, "Uusi pulma"));
+  }
+
+  library = newLib;
+  currentPuzzleIndex = 0;
+  selectedId = "Grey_I";
+  rebuildSessionFromCurrentPuzzle();
+}
+
+
+  function clearLibrary(){
+    library = { version:1, holes_fixed: HOLES_FIXED, puzzles: [ createFreshPuzzle(100, "Uusi pulma") ] };
+    currentPuzzleIndex = 0;
+    selectedId = "Grey_I";
+    jsonOut.value = "";
+    rebuildSessionFromCurrentPuzzle();
+  }
+
+
+  // --- File save/load helpers (no server needed) ---
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:"application/json;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function readFileAsText(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("FileReader error"));
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  // --- Wire UI ---
+  puzzleSelectEl.addEventListener("change", ()=>{
+    // save current edits silently to current puzzle before switching
+    writeSessionBackToCurrentPuzzle();
+    currentPuzzleIndex = Number(puzzleSelectEl.value) || 0;
+    rebuildSessionFromCurrentPuzzle();
+  });
+
+  puzzleNameEl.addEventListener("input", ()=>{
+    // keep session only; saved when pressing Tallenna or switching
+    const pz = currentPuzzle();
+    if(pz) pz.name = puzzleNameEl.value;
+    refreshPuzzleSelect();
+  });
+
+  puzzleIdEl.addEventListener("input", ()=>{
+    const pz = currentPuzzle();
+    if(pz) pz.id = Number(puzzleIdEl.value)||pz.id;
+    refreshPuzzleSelect();
+  });
+
+  rotBtn.addEventListener("click", rotateSelected);
+  removeBtn.addEventListener("click", removeSelected);
+
+  newPuzzleBtn.addEventListener("click", newPuzzle);
+  savePuzzleBtn.addEventListener("click", savePuzzle);
+  deletePuzzleBtn.addEventListener("click", deletePuzzle);
+
+  exportBtn.addEventListener("click", ()=>{
+    // 1) päivitä textarea
+    exportLibraryToTextarea();
+    // 2) lataa tiedosto koneelle
+    downloadText("puzzles.json", jsonOut.value);
+  });
+  importBtn.addEventListener("click", ()=>{
+    const txt = (jsonOut.value || "").trim();
+    if(txt){
+      try{
+        JSON.parse(txt);
+        importLibraryFromTextarea();
+        return;
+      }catch(e){
+        // jos textarea ei ole kelvollinen JSON, avataan tiedoston valinta
+      }
+    }
+    fileInput.click();
+  });
+  clearLibBtn.addEventListener("click", clearLibrary);
+  fileInput.addEventListener("change", async ()=>{
+    const f = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if(!f) return;
+    try{
+      const text = await readFileAsText(f);
+      jsonOut.value = text;
+      importLibraryFromTextarea();
+    }catch(err){
+      alert("Tiedoston lukeminen epäonnistui.");
+    }
+  });
+
+
+  // Init
+  rebuildSessionFromCurrentPuzzle();
+})();
+</script>
+</body>
+</html>
