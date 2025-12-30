@@ -241,6 +241,7 @@ html, body{ overscroll-behavior: none; }
       <select id="puzzleSelect" class="select" aria-label="Pulmavalinta"></select>
       <div id="status" class="status">Siirrä pähkinät piiloon.</div>
       <button id="resetBtn" class="btn">Alkuun</button>
+	  <button id="nextBtn" class="btn secondary">Seuraava</button>
     </div>
 
     <div class="boardWrap">
@@ -266,6 +267,7 @@ html, body{ overscroll-behavior: none; }
   const boardEl = document.getElementById("board");
   const statusEl = document.getElementById("status");
   const resetBtn = document.getElementById("resetBtn");
+  const nextBtn = document.getElementById("nextBtn");
   const selEl = document.getElementById("puzzleSelect");
 
   const W=4, H=4;
@@ -273,6 +275,42 @@ html, body{ overscroll-behavior: none; }
   function idx(r,c){ return r*W+c; }
   function inBounds(r,c){ return r>=0 && r<H && c>=0 && c<W; }
 
+
+  // --- Edistymisen tallennus (muistaa viimeisimmän läpäistyn pulman) ---
+  const LS_KEY_LAST_SOLVED = "nuts_lastSolvedIndex_v1";
+  function getLastSolvedIndex(){
+    const v = localStorage.getItem(LS_KEY_LAST_SOLVED);
+    const n = Number(v);
+    return Number.isInteger(n) && n >= 0 ? n : -1;
+  }
+  function setLastSolvedIndex(i){
+    try{ localStorage.setItem(LS_KEY_LAST_SOLVED, String(i)); }catch(e){}
+  }
+  function currentPuzzleIndex(){
+    return PUZZLES_RAW.findIndex(p => p.id===currentPuzzleId);
+  }
+  function nextPuzzleIdFromIndex(i){
+    if(PUZZLES_RAW.length===0) return null;
+    const j = (i+1) % PUZZLES_RAW.length;
+    return PUZZLES_RAW[j].id;
+  }
+  function pickStartupPuzzleId(){
+    if(PUZZLES_RAW.length===0) return null;
+    const last = getLastSolvedIndex();
+    const startIndex = (last>=0 && last < PUZZLES_RAW.length-1) ? (last+1) : ((last>=PUZZLES_RAW.length-1) ? 0 : 0);
+    return PUZZLES_RAW[startIndex].id;
+  }
+
+  function loadNextPuzzle(){
+    if(PUZZLES_RAW.length===0) return;
+    const ci = currentPuzzleIndex();
+    const base = (ci >= 0) ? ci : 0;
+    const nextId = nextPuzzleIdFromIndex(base);
+    if(nextId==null) return;
+    selEl.value = String(nextId);
+    loadPuzzle(nextId);
+  }
+  
   // --- Pulmat (13 ja 37) ---
   // Note: puzzle pieces given as absolute cells + nut_cell (absolute).
   let PUZZLES_RAW = [
@@ -442,7 +480,12 @@ html, body{ overscroll-behavior: none; }
     moves++;
     if(!anyNutLeft()){
       solved = true;
+	  
       setStatus(`🎉 Ratkaistu! Siirtoja: ${moves}`, "success");
+	  // tallenna edistyminen: muista viimeisin läpäisty pulma myös selaimen uudelleenkäynnistyksen jälkeen
+      const ci = currentPuzzleIndex();
+      const prev = getLastSolvedIndex();
+      if(ci > prev) setLastSolvedIndex(ci);
     } else {
       setStatus(`Siirtoja: ${moves}`, "");
     }
@@ -451,7 +494,7 @@ html, body{ overscroll-behavior: none; }
 
   function loadPuzzle(puzzleId){
     const raw = PUZZLES_RAW.find(p => p.id===puzzleId);
-    if(!raw) return;
+    if(!raw) return false;
 
     currentPuzzleId = puzzleId;
     moves = 0;
@@ -468,6 +511,7 @@ html, body{ overscroll-behavior: none; }
     selectedId = state.pieces[0]?.id || null;
     setStatus("Siirrä pähkinät piiloon.", "");
     render();
+    return true;
   }
 
   function reset(){
@@ -595,6 +639,8 @@ cell.appendChild(num);
 
   // controls
   resetBtn.addEventListener("click", reset);
+  nextBtn.addEventListener("click", loadNextPuzzle);
+
 
   // keys (PC)
   window.addEventListener("keydown", (e)=>{

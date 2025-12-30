@@ -1,4 +1,4 @@
-const CACHE = "squirrels-test-v2";
+const CACHE = "squirrels-test-v4";
 const ASSETS = [
   "./",
   "./index.html",
