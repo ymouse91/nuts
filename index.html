@@ -297,7 +297,12 @@ html, body{ overscroll-behavior: none; }
   function pickStartupPuzzleId(){
     if(PUZZLES_RAW.length===0) return null;
     const last = getLastSolvedIndex();
-    const startIndex = (last>=0 && last < PUZZLES_RAW.length-1) ? (last+1) : ((last>=PUZZLES_RAW.length-1) ? 0 : 0);
+
+    // Ei vielä ratkaistua pulmaa → aloita ekasta
+    if(last < 0) return PUZZLES_RAW[0].id;
+
+    // Muuten seuraava (ja kierto alusta)
+    const startIndex = (last < PUZZLES_RAW.length-1) ? (last+1) : 0;
     return PUZZLES_RAW[startIndex].id;
   }
 
@@ -745,13 +750,25 @@ boardEl.addEventListener("pointercancel", ()=> endDrag());
 
 // start
   (async()=>{
-    const ok = await tryLoadPuzzlesJson();
-    // jos ladattiin uusi kirjasto, valitaan ensimmäinen pulma
-    if(ok && PUZZLES_RAW.length>0){
-      currentPuzzleId = PUZZLES_RAW[0].id;
+    // Yritä ladata ulkoinen puzzles.json (PWA/offline-tilassa voi epäonnistua)
+    await tryLoadPuzzlesJson();
+
+    // Valitse aloituspulma aina edistys huomioiden:
+    // - jos edistystä ei ole → eka pulma
+    // - jos on → seuraava läpäistyn jälkeen
+    if(PUZZLES_RAW.length>0){
+      const startId = pickStartupPuzzleId();
+      currentPuzzleId = (startId!=null) ? startId : PUZZLES_RAW[0].id;
     }
+
     initSelector();
-    loadPuzzle(currentPuzzleId);
+
+    // Turvaverkko: jos jokin meni pieleen, lataa aina eka pulma
+    if(!loadPuzzle(currentPuzzleId) && PUZZLES_RAW.length>0){
+      currentPuzzleId = PUZZLES_RAW[0].id;
+      selEl.value = String(currentPuzzleId);
+      loadPuzzle(currentPuzzleId);
+    }
   })();
 })();
 </script>
