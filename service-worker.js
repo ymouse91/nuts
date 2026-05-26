@@ -25,6 +25,6 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request))
+    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request))
   );
 });

@@ -281,6 +281,7 @@ html, body{ overscroll-behavior: none; }
   const LS_KEY_LAST_SOLVED = "nuts_lastSolvedIndex_v1";
   function getLastSolvedIndex(){
     const v = localStorage.getItem(LS_KEY_LAST_SOLVED);
+    if(v === null) return -1;
     const n = Number(v);
     return Number.isInteger(n) && n >= 0 ? n : -1;
   }
@@ -796,13 +797,15 @@ boardEl.addEventListener("pointercancel", ()=> endDrag());
 </div>
 
 <script>
-const qr=new QRious({
-  element:document.getElementById('qr'),
-  value:'https://ymouse91.github.io/nuts/',
-  size:180
-});
 const overlay=document.getElementById('qrOverlay');
-document.getElementById('title').onclick=()=>overlay.style.display='flex';
+if(window.QRious){
+  const qr=new QRious({
+    element:document.getElementById('qr'),
+    value:'https://ymouse91.github.io/nuts/',
+    size:180
+  });
+  document.getElementById('title').onclick=()=>overlay.style.display='flex';
+}
 overlay.onclick=()=>overlay.style.display='none';
 </script>
 </body>
